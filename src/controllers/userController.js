@@ -1,10 +1,12 @@
-const userModel = require("../models/userModel")
-
+const userModel = require("../models/userModel");
+require("dotenv").config();
+const jwt = require("jsonwebtoken")
 const bcrypt = require("bcryptjs");
 const speakeasy = require("speakeasy");
 const qrcode = require("qrcode");
 const SendEmailUtility = require("../helper/emailHelper");
 const { successResponse, errorResponse } = require("../utility/response");
+const key = process.env.SECRET_KEY
 
 
 exports.registration = async (req, res) => {
@@ -73,8 +75,14 @@ exports.verifyLoginEmailCode = async (req, res) => {
     try {
         const { email, emailCode } = req.body;
         const user = await userModel.findOne({ email, emailCode });
-        if (!user || user.emailCodeExpires < Date.now()) return errorResponse(res, 400, "Invalid or expired code", null)
-        return successResponse(res, 200, "Email verification successfully", null);
+        if (!user || user.emailCodeExpires < Date.now()) return errorResponse(res, 400, "Invalid or expired code", null);
+        const payload = {
+            email: user.email,
+            password: user.password
+        };
+        const time = { expiresIn: '12h' }
+        const token = jwt.sign(payload,key,time)
+        return successResponse(res, 200, "Email verification successfully", token);
     } catch (error) {
         return errorResponse(res, 500, "Something went wrong", error)
     }
@@ -100,7 +108,7 @@ exports.enableGoogleAuthenticator = async (req, res) => {
 
 
 // Verify Google Authenticator 2FA
-exports.verifyGoogleAuthenticator2FA =  async (req, res) => {
+exports.verifyGoogleAuthenticator2FA = async (req, res) => {
     const { email, token } = req.body;
     const user = await userModel.findOne({ email });
     if (!user || !user.is2FAEnabled) return res.status(400).json({ message: "2FA not enabled" });
