@@ -108,6 +108,7 @@ exports.enableGoogleAuthenticator = async (req, res) => {
 
 
 // Verify Google Authenticator 2FA
+
 exports.verifyGoogleAuthenticator2FA = async (req, res) => {
     const { email, token } = req.body;
     const user = await userModel.findOne({ email });
